@@ -1,0 +1,68 @@
+version: "3.4"
+
+services:
+  php:
+    build: 
+      context: '.docker/php/'
+      args:
+        VERSION: ${PHP_VERSION}
+    container_name: php
+    environment:
+      DB_HOST: 'mysql' # name of container, so if it updates, this needs to as well
+      DB_NAME: "${DB_NAME}"
+      DB_USERNAME: "${DB_USERNAME}"
+      DB_PASSWORD: "${DB_PASSWORD}"
+      DEV: 1
+    networks:
+      - backend
+    volumes:
+      - ${DOC_ROOT}/:/var/www/html/
+  
+  apache:
+    build:
+      context: '.docker/apache/'
+      args:
+        VERSION: ${APACHE_VERSION}
+    container_name: apache
+    depends_on:
+      - php
+      - mysql
+    networks:
+      - frontend
+      - backend
+    ports:
+      - "80:80"
+    volumes:
+      - ${DOC_ROOT}/:/var/www/html/
+  
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    container_name: mysql
+    restart: always
+    ports:
+      - "3306:3306"
+    volumes:
+     - ./.docker/mysql/data:/var/lib/mysql
+    networks:
+      - backend
+    environment:
+      MYSQL_ROOT_PASSWORD: "${DB_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${DB_NAME}"
+      MYSQL_USER: "${DB_USERNAME}"
+      MYSQL_PASSWORD: "${DB_PASSWORD}"
+  
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:${PHPMYADMIN_VERSION}
+    container_name: phpmyadmin
+    ports:
+      - "8080:80"
+    depends_on:
+      - mysql
+    networks:
+      - backend
+    external_links:
+      - mysql:db
+  
+networks:
+  frontend:
+  backend:
